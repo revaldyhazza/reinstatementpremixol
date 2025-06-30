@@ -190,11 +190,11 @@ def rangkum_layer(df_soc, nomor_layer, batas_layer, jumlah_iterasi, maks_reinsta
 # Fungsi untuk menghitung premi
 def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_per_layer):
     daftar_df_premi = []
-    maks_reinstatement = max(reinstatement_per_layer)
+    maks_reinstatement = max(reinstatement_per_layer)  # Kolom maksimum untuk semua layer
     
     for i, (df_layer, batas_layer, maks_reinst) in enumerate(zip(daftar_df_layer, layer, reinstatement_per_layer)):
         if batas_layer <= 0:
-            st.warning(f"Batas Layer {i+1} adalah 0. Premi untuk layer Genomics akan diabaikan.")
+            st.warning(f"Batas Layer {i+1} adalah 0. Premi untuk layer ini akan diabaikan.")
             continue
         
         data_premi = {
@@ -250,22 +250,6 @@ def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_p
     df_premi_kombinasi['Total'] = df_premi_kombinasi[[f'Reinstatement {i}' for i in range(maks_reinstatement + 1)]].sum(axis=1)
     
     return df_premi_kombinasi
-
-# Fungsi untuk menghitung premi setelah loading
-def hitung_premi_setelah_loading(df_premi, risk_adjustment, profit, opex, komisi):
-    df_premi_setelah_loading = df_premi.copy()
-    max_reinstatement = max([int(col.split()[-1]) for col in df_premi.columns if col.startswith('Reinstatement')])
-    
-    for reinst in range(max_reinstatement + 1):
-        col = f'Reinstatement {reinst}'
-        if col in df_premi_setelah_loading.columns:
-            df_premi_setelah_loading[col] = df_premi_setelah_loading[col] * (1 + risk_adjustment / 100) / (1 - (profit + opex + komisi) / 100)
-            df_premi_setelah_loading[col] = df_premi_setelah_loading[col].apply(lambda x: int(x) if pd.notnull(x) else x)
-    
-    df_premi_setelah_loading['Total'] = df_premi_setelah_loading[[f'Reinstatement {i}' for i in range(max_reinstatement + 1)]].sum(axis=1)
-    df_premi_setelah_loading['Total'] = df_premi_setelah_loading['Total'].apply(lambda x: int(x) if pd.notnull(x) else x)
-    
-    return df_premi_setelah_loading
 
 # Aplikasi Streamlit
 st.set_page_config(page_title="XoL Reinstatement 💰", layout="wide", page_icon="📊")
@@ -411,28 +395,6 @@ if file_severitas and file_frekuensi:
                 st.subheader("10. Premi XoL", divider="orange")
                 st.dataframe(df_premi, hide_index=True, use_container_width=True)
                 
-                # Input untuk faktor loading
-                st.header("Input Faktor Loading (dalam %)", divider="orange")
-                with st.container(border=True):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        risk_adjustment = st.number_input("Risk Adjustment (%)", min_value=0.0, value=10.0, step=0.1)
-                        profit = st.number_input("Profit (%)", min_value=0.0, value=5.0, step=0.1)
-                    with col2:
-                        opex = st.number_input("Operating Expenses (%)", min_value=0.0, value=5.0, step=0.1)
-                        komisi = st.number_input("Komisi (%)", min_value=0.0, value=5.0, step=0.1)
-                
-                # Validasi total loading
-                total_loading = profit + opex + komisi
-                if total_loading >= 100:
-                    st.error("Total Profit, Operating Expenses, dan Komisi tidak boleh mencapai atau melebihi 100%.")
-                    st.stop()
-                
-                # Hitung premi setelah loading
-                df_premi_setelah_loading = hitung_premi_setelah_loading(df_premi, risk_adjustment, profit, opex, komisi)
-                st.subheader("11. Premi XoL (Setelah Loading)", divider="orange")
-                st.dataframe(df_premi_setelah_loading, hide_index=True, use_container_width=True)
-                
                 # Buat file Excel
                 output = BytesIO()
                 wb = Workbook()
@@ -445,25 +407,17 @@ if file_severitas and file_frekuensi:
                 perataan_tengah = Alignment(horizontal='center', vertical='center')
                 format_rupiah = '#,##0'
                 
-                # Dataframe untuk faktor loading
-                df_loading_factors = pd.DataFrame({
-                    'Faktor': ['Risk Adjustment', 'Profit', 'Operating Expenses', 'Komisi'],
-                    'Nilai (%)': [risk_adjustment, profit, opex, komisi]
-                })
-                
                 daftar_lembar = [
                     (df_premi, '1. Premi XoL'),
-                    (df_premi_setelah_loading, '2. Premi XoL Setelah Loading'),
-                    (df_loading_factors, '3. Loading Factors'),
-                    (df_tabel, '4. Hasil Simulasi'),
-                    (df_klaim, '5. Spreading of Claim'),
-                    (df_ringkasan_frekuensi, '6. Klaim UR'),
-                    (daftar_df_layer[0].drop(columns=["Iterasi"]), '7. Layer 1'),
-                    (daftar_df_layer[1].drop(columns=["Iterasi"]), '8. Layer 2'),
-                    (daftar_df_layer[2].drop(columns=["Iterasi"]), '9. Layer 3'),
-                    (daftar_df_layer[3].drop(columns=["Iterasi"]), '10. Layer 4'),
-                    (daftar_df_layer[4].drop(columns=["Iterasi"]), '11. Layer 5'),
-                    (daftar_df_layer[5].drop(columns=["Iterasi"]), '12. Layer 6')
+                    (df_tabel, '2. Hasil Simulasi'),
+                    (df_klaim, '3. Spreading of Claim'),
+                    (df_ringkasan_frekuensi, '4. Klaim UR'),
+                    (daftar_df_layer[0].drop(columns=["Iterasi"]), '5. Layer 1'),
+                    (daftar_df_layer[1].drop(columns=["Iterasi"]), '6. Layer 2'),
+                    (daftar_df_layer[2].drop(columns=["Iterasi"]), '7. Layer 3'),
+                    (daftar_df_layer[3].drop(columns=["Iterasi"]), '8. Layer 4'),
+                    (daftar_df_layer[4].drop(columns=["Iterasi"]), '9. Layer 5'),
+                    (daftar_df_layer[5].drop(columns=["Iterasi"]), '10. Layer 6')
                 ]
                 
                 for df, nama_lembar in daftar_lembar:
@@ -477,10 +431,8 @@ if file_severitas and file_frekuensi:
                         for cell in row:
                             cell.border = batas_tipis
                             cell.alignment = perataan_tengah
-                            if cell.column > 1 and isinstance(cell.value, (int, float)) and nama_lembar != '3. Loading Factors':
+                            if cell.column > 1 and isinstance(cell.value, (int, float)):
                                 cell.number_format = format_rupiah
-                            if nama_lembar == '3. Loading Factors' and cell.column == 2:
-                                cell.number_format = '0.00'
                     
                     for col in ws.columns:
                         panjang_maks = 0

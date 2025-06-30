@@ -5,12 +5,12 @@ from fitter import Fitter
 import scipy.stats as stats
 from io import BytesIO
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Side, PatternFill
+from openpyxl.styles import Alignment, Border, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-# Fungsi untuk menyesuaikan distribusi severitas dan mengembalikan metrik
+# Fungsi untuk menyesuaikan distribusi severitas
 def sesuaikan_distribusi_severitas(data):
-    distribusi_severitas = ['lognorm', 'gamma', 'weibull_min', 'expon', 'beta', 'pareto', 'invgauss', 'fisk', 'loggamma', 'genpareto', 'erlang', 'cauchy', '']
+    distribusi_severitas = ['lognorm', 'gamma', 'weibull_min', 'expon', 'beta', 'pareto', 'invgauss', 'fisk', 'loggamma', 'genpareto', 'erlang', 'cauchy']
     try:
         f = Fitter(data, distributions=distribusi_severitas, timeout=300)
         f.fit()
@@ -101,7 +101,7 @@ def jalankan_simulasi_monte_carlo(jumlah_iterasi, nama_dist_frekuensi, param_fre
             klaim = dist_severitas.rvs(*param_severitas, size=jumlah_klaim, random_state=i) if jumlah_klaim > 0 else np.array([])
             
             for j in range(jumlah_klaim):
-                severitas = max(int(klaim[j]), 0)  # Pastikan severitas tidak negatif
+                severitas = max(int(klaim[j]), 0)
                 data_tabel.append({
                     'Iterasi': f"{i+1}.{j+1}",
                     'Severitas': severitas,
@@ -147,7 +147,7 @@ def alokasikan_klaim(data_simulasi, ur, layer, data_iterasi):
     
     return pd.DataFrame(hasil)
 
-# Fungsi untuk merangkum hasil berdasarkan frekuensi
+# Fungsi untuk merangkum berdasarkan frekuensi
 def rangkum_berdasarkan_frekuensi(df_simulasi, df_soc, jumlah_iterasi):
     data_frekuensi = df_simulasi.dropna(subset=['Flagging Frekuensi'])[['Iterasi', 'Flagging Frekuensi']]
     peta_frekuensi = data_frekuensi.set_index('Iterasi')['Flagging Frekuensi'].to_dict()
@@ -169,7 +169,7 @@ def rangkum_berdasarkan_frekuensi(df_simulasi, df_soc, jumlah_iterasi):
     df_ringkasan.index.name = 'Iterasi'
     return df_ringkasan.reset_index()
 
-# Fungsi untuk merangkum layer tertentu dan menghitung reinstatement
+# Fungsi untuk merangkum layer tertentu
 def rangkum_layer(df_soc, nomor_layer, batas_layer, jumlah_iterasi, maks_reinstatement):
     ringkasan_layer = df_soc.groupby(df_soc['Iterasi'].str.split('.').str[0]).agg({f'Layer {nomor_layer}': 'sum'}).rename(columns={f'Layer {nomor_layer}': f'Total Layer {nomor_layer}'})
     
@@ -187,18 +187,19 @@ def rangkum_layer(df_soc, nomor_layer, batas_layer, jumlah_iterasi, maks_reinsta
     
     return df_ringkasan.reset_index()
 
-# Fungsi untuk menghitung premi untuk setiap layer secara terpisah dengan total lintas layer
-def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, maks_reinstatement):
+# Fungsi untuk menghitung premi
+def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_per_layer):
     daftar_df_premi = []
+    maks_reinstatement = max(reinstatement_per_layer)  # Kolom maksimum untuk semua layer
     
-    for i, df_layer in enumerate(daftar_df_layer):
-        if layer[i] <= 0:
+    for i, (df_layer, batas_layer, maks_reinst) in enumerate(zip(daftar_df_layer, layer, reinstatement_per_layer)):
+        if batas_layer <= 0:
             st.warning(f"Batas Layer {i+1} adalah 0. Premi untuk layer ini akan diabaikan.")
             continue
         
         data_premi = {
             'Item': [f'Layer {i+1}'],
-            'Batas': [int(layer[i])],
+            'Batas': [int(batas_layer)],
             'Rata-rata': [int(df_layer[f'Total Layer {i+1}'].mean())],
             'Standar Deviasi': [int(df_layer[f'Total Layer {i+1}'].std())]
         }
@@ -206,6 +207,9 @@ def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, maks_reinstatem
         
         premi = []
         for reinst in range(maks_reinstatement + 1):
+            if reinst > maks_reinst:
+                premi.append(0)
+                continue
             if f'Reinstatement {reinst}' not in df_layer.columns:
                 premi.append(0)
                 continue
@@ -214,8 +218,8 @@ def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, maks_reinstatem
             else:
                 rata_rata_sekarang = df_layer[f'Reinstatement {reinst}'].mean()
                 rata_rata_sebelumnya = df_layer[f'Reinstatement {reinst-1}'].mean()
-                if rata_rata_sebelumnya > 0 and layer[i] > 0:
-                    premi_reinst = rata_rata_sekarang / (1 + rata_rata_sebelumnya / layer[i])
+                if rata_rata_sebelumnya > 0 and batas_layer > 0:
+                    premi_reinst = rata_rata_sekarang / (1 + rata_rata_sebelumnya / batas_layer)
                 else:
                     premi_reinst = 0
             premi.append(int(premi_reinst))
@@ -251,7 +255,7 @@ def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, maks_reinstatem
 st.set_page_config(page_title="XoL Reinstatement 💰", layout="wide", page_icon="📊")
 st.title("Pricing Excess of Loss dengan Reinstatement 📊")
 
-# Unggah file untuk data severitas dan frekuensi
+# Unggah file
 st.header("Unggah File", divider="orange")
 with st.container(border=True):
     col1, col2 = st.columns(2)
@@ -260,7 +264,7 @@ with st.container(border=True):
     with col2:
         file_frekuensi = st.file_uploader("Unggah Data Frekuensi", type=["xlsx", "xls"], key="frekuensi")
 
-# Proses file yang diunggah
+# Proses file
 if file_severitas and file_frekuensi:
     try:
         df_severitas = pd.read_excel(file_severitas)
@@ -334,11 +338,16 @@ if file_severitas and file_frekuensi:
     st.header("Input OR dan Layer untuk Spreading of Claim (SoC)", divider="orange")
     with st.container(border=True):
         ur = st.number_input("OR", min_value=0, value=5000000000, step=1000000000)
-        layer = [
-            st.number_input(f"Layer {i}", min_value=0, value=5000000000 if i == 1 else 40000000000 if i == 2 else 50000000000 if i == 3 else 0, step=1000000)
-            for i in range(1, 7)
-        ]
-        maks_reinstatement = st.number_input("Pilih ingin berapa kali dilakukan reinstatement", min_value=0, max_value=100, value=5, step=1)
+        layer = []
+        reinstatement_per_layer = []
+        for i in range(1, 7):
+            col1, col2 = st.columns(2)
+            with col1:
+                batas = st.number_input(f"Layer {i}", min_value=0, value=5000000000 if i == 1 else 40000000000 if i == 2 else 50000000000 if i == 3 else 0, step=1000000, key=f"layer_{i}")
+            with col2:
+                reinst = st.number_input(f"Jumlah Reinstatement Layer {i}", min_value=0, max_value=100, value=5, step=1, key=f"reinst_{i}")
+            layer.append(batas)
+            reinstatement_per_layer.append(reinst)
     
     if st.button("Jalankan Simulasi", type="primary"):
         with st.spinner("Menjalankan simulasi Monte Carlo..."):
@@ -372,7 +381,7 @@ if file_severitas and file_frekuensi:
                 
                 daftar_df_layer = []
                 for i in range(1, 7):
-                    df_layer = rangkum_layer(df_klaim, i, layer[i-1], jumlah_iterasi, maks_reinstatement)
+                    df_layer = rangkum_layer(df_klaim, i, layer[i-1], jumlah_iterasi, reinstatement_per_layer[i-1])
                     st.subheader(f"{3+i}. Layer {i}", divider="orange")
                     st.dataframe(df_layer.drop(columns=["Iterasi"]), hide_index=True, use_container_width=True)
                     daftar_df_layer.append(df_layer)
@@ -381,12 +390,12 @@ if file_severitas and file_frekuensi:
                     df_ringkasan_frekuensi,
                     daftar_df_layer,
                     layer,
-                    maks_reinstatement
+                    reinstatement_per_layer
                 )
                 st.subheader("10. Premi XoL", divider="orange")
                 st.dataframe(df_premi, hide_index=True, use_container_width=True)
                 
-                # Buat file Excel dengan format
+                # Buat file Excel
                 output = BytesIO()
                 wb = Workbook()
                 wb.remove(wb.active)
@@ -396,7 +405,7 @@ if file_severitas and file_frekuensi:
                                    top=Side(style='thin'),
                                    bottom=Side(style='thin'))
                 perataan_tengah = Alignment(horizontal='center', vertical='center')
-                format_rupiah = '#,##0'  # Format tanpa desimal untuk IDR
+                format_rupiah = '#,##0'
                 
                 daftar_lembar = [
                     (df_premi, '1. Premi XoL'),
@@ -409,7 +418,6 @@ if file_severitas and file_frekuensi:
                     (daftar_df_layer[3].drop(columns=["Iterasi"]), '8. Layer 4'),
                     (daftar_df_layer[4].drop(columns=["Iterasi"]), '9. Layer 5'),
                     (daftar_df_layer[5].drop(columns=["Iterasi"]), '10. Layer 6')
-                    
                 ]
                 
                 for df, nama_lembar in daftar_lembar:

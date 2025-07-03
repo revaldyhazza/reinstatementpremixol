@@ -215,17 +215,18 @@ def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_p
     maks_reinstatement = max(reinstatement_per_layer)
     
     for i, (df_layer, batas_layer, maks_reinst) in enumerate(zip(daftar_df_layer, layer, reinstatement_per_layer)):
+        nomor_layer = i + 1
         if batas_layer <= 0:
-            st.warning(f"Batas Layer {i+1} adalah 0. Premi untuk layer ini akan diabaikan.")
+            st.warning(f"Batas Layer {nomor_layer} adalah 0. Premi untuk layer ini akan diabaikan.")
             continue
         
         data_premi = {
-            'Item': [f'Layer {i+1}'],
+            'Item': [f'Layer {nomor_layer}'],
             'Batas': [int(batas_layer)],
-            'Rata-rata Klaim': [int(df_layer[f'Total Layer {i+1}'].mean())],
-            'Standar Deviasi Klaim': [int(df_layer[f'Total Layer {i+1}'].std())],
-            'Frekuensi Klaim': [int(df_layer[f'Frekuensi Layer {i+1}'].sum())],
-            'Total Klaim': [int(df_layer[f'Total Layer {i+1}'].sum())],
+            'Rata-rata Klaim': [int(df_layer[f'Total Layer {nomor_layer}'].mean())],
+            'Standar Deviasi Klaim': [int(df_layer[f'Total Layer {nomor_layer}'].std())],
+            'Frekuensi Klaim': [int(df_layer[f'Frekuensi Layer {nomor_layer}'].sum())],
+            'Total Klaim': [int(df_layer[f'Total Layer {nomor_layer}'].sum())]
         }
         df_premi = pd.DataFrame(data_premi)
         
@@ -258,17 +259,18 @@ def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_p
     
     df_premi_kombinasi = pd.concat(daftar_df_premi, ignore_index=True)
     
-    total_premi = {}
+    total_premi = {
+        'Item': 'Total',
+        'Batas': '',
+        'Rata-rata Klaim': int(df_premi_kombinasi['Rata-rata Klaim'].sum()),
+        'Standar Deviasi Klaim': int(df_premi_kombinasi['Standar Deviasi Klaim'].sum()),
+        'Frekuensi Klaim': int(df_premi_kombinasi['Frekuensi Klaim'].sum()),
+        'Total Klaim': int(df_premi_kombinasi['Total Klaim'].sum())
+    }
     for reinst in range(maks_reinstatement + 1):
-        total_premi[f'Reinstatement {reinst}'] = df_premi_kombinasi[f'Reinstatement {reinst}'].sum()
+        total_premi[f'Reinstatement {reinst}'] = int(df_premi_kombinasi[f'Reinstatement {reinst}'].sum())
     
-    baris_total = pd.DataFrame({
-        'Item': ['Total'],
-        'Batas': [''],
-        'Rata-rata': [''],
-        'Standar Deviasi': [''],
-        **{f'Reinstatement {reinst}': [int(total_premi[f'Reinstatement {reinst}'])] for reinst in range(maks_reinstatement + 1)}
-    })
+    baris_total = pd.DataFrame([total_premi])
     df_premi_kombinasi = pd.concat([df_premi_kombinasi, baris_total], ignore_index=True)
     
     df_premi_kombinasi['Total'] = df_premi_kombinasi[[f'Reinstatement {i}' for i in range(maks_reinstatement + 1)]].sum(axis=1)
@@ -418,7 +420,7 @@ if file_severitas and file_frekuensi:
                     cache_key_layer = str(uuid.uuid4())
                     df_layer = rangkum_layer(df_klaim, i, layer[i-1], jumlah_iterasi, reinstatement_per_layer[i-1], _cache_key=cache_key_layer)
                     st.subheader(f"{3+i}. Layer {i}", divider="orange")
-                    st.dataframe(df_layer, hide_index=True, use_container_width=True)
+                    st.dataframe(df_layer.drop(columns=["Iterasi"]), hide_index=True, use_container_width=True)
                     daftar_df_layer.append(df_layer)
                 
                 # Generate unique cache key for premium calculation
@@ -450,12 +452,12 @@ if file_severitas and file_frekuensi:
                     (df_tabel, '2. Hasil Simulasi'),
                     (df_klaim, '3. Spreading of Claim'),
                     (df_ringkasan_frekuensi, '4. Klaim UR'),
-                    (daftar_df_layer[0], '5. Layer 1'),
-                    (daftar_df_layer[1], '6. Layer 2'),
-                    (daftar_df_layer[2], '7. Layer 3'),
-                    (daftar_df_layer[3], '8. Layer 4'),
-                    (daftar_df_layer[4], '9. Layer 5'),
-                    (daftar_df_layer[5], '10. Layer 6')
+                    (daftar_df_layer[0].drop(columns=["Iterasi"]), '5. Layer 1'),
+                    (daftar_df_layer[1].drop(columns=["Iterasi"]), '6. Layer 2'),
+                    (daftar_df_layer[2].drop(columns=["Iterasi"]), '7. Layer 3'),
+                    (daftar_df_layer[3].drop(columns=["Iterasi"]), '8. Layer 4'),
+                    (daftar_df_layer[4].drop(columns=["Iterasi"]), '9. Layer 5'),
+                    (daftar_df_layer[5].drop(columns=["Iterasi"]), '10. Layer 6')
                 ]
                 
                 for df, nama_lembar in daftar_lembar:

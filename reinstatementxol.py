@@ -177,13 +177,28 @@ def rangkum_berdasarkan_frekuensi(df_simulasi, df_soc, jumlah_iterasi, _cache_ke
 # Fungsi untuk merangkum layer tertentu dengan caching
 @st.cache_data
 def rangkum_layer(df_soc, nomor_layer, batas_layer, jumlah_iterasi, maks_reinstatement, _cache_key=None):
-    ringkasan_layer = df_soc.groupby(df_soc['Iterasi'].str.split('.').str[0]).agg({f'Layer {nomor_layer}': 'sum'}).rename(columns={f'Layer {nomor_layer}': f'Total Layer {nomor_layer}'})
+    # Menghitung total severitas per layer
+    ringkasan_layer = df_soc.groupby(df_soc['Iterasi'].str.split('.').str[0]).agg({
+        f'Layer {nomor_layer}': 'sum',
+    }).rename(columns={f'Layer {nomor_layer}': f'Total Layer {nomor_layer}'})
+    
+    # Menghitung frekuensi (jumlah klaim dengan nilai > 0) per layer
+    frekuensi_layer = df_soc[df_soc[f'Layer {nomor_layer}'] > 0].groupby(
+        df_soc['Iterasi'].str.split('.').str[0]
+    ).size().to_frame(name=f'Frekuensi Layer {nomor_layer}')
     
     semua_iterasi = [str(i) for i in range(1, jumlah_iterasi + 1)]
     
     df_ringkasan = pd.DataFrame(index=semua_iterasi)
     df_ringkasan.index.name = 'Iterasi'
-    df_ringkasan[f'Total Layer {nomor_layer}'] = [ringkasan_layer.loc[str(i), f'Total Layer {nomor_layer}'] if str(i) in ringkasan_layer.index else 0 for i in semua_iterasi]
+    df_ringkasan[f'Total Layer {nomor_layer}'] = [
+        ringkasan_layer.loc[str(i), f'Total Layer {nomor_layer}'] if str(i) in ringkasan_layer.index else 0
+        for i in semua_iterasi
+    ]
+    df_ringkasan[f'Frekuensi Layer {nomor_layer}'] = [
+        frekuensi_layer.loc[str(i), f'Frekuensi Layer {nomor_layer}'] if str(i) in frekuensi_layer.index else 0
+        for i in semua_iterasi
+    ]
     
     for reinst in range(maks_reinstatement + 1):
         df_ringkasan[f'Reinstatement {reinst}'] = df_ringkasan.apply(

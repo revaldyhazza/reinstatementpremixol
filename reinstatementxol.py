@@ -7,9 +7,11 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
+import uuid
 
-# Fungsi untuk menyesuaikan distribusi severitas
-def sesuaikan_distribusi_severitas(data):
+# Fungsi untuk menyesuaikan distribusi severitas dengan caching
+@st.cache_data
+def sesuaikan_distribusi_severitas(data, _cache_key=None):
     distribusi_severitas = ['lognorm', 'gamma', 'weibull_min', 'expon', 'beta', 'pareto', 'invgauss', 'fisk', 'loggamma', 'genpareto', 'erlang', 'cauchy']
     try:
         f = Fitter(data, distributions=distribusi_severitas, timeout=300)
@@ -61,8 +63,9 @@ def sesuaikan_distribusi_severitas(data):
     df_metrik = pd.DataFrame(metrik)
     return df_metrik.sort_values('AIC').head(10), parameter_disesuaikan
 
-# Fungsi simulasi Monte Carlo
-def jalankan_simulasi_monte_carlo(jumlah_iterasi, nama_dist_frekuensi, param_frekuensi, nama_dist_severitas, param_severitas):
+# Fungsi simulasi Monte Carlo dengan caching
+@st.cache_data
+def jalankan_simulasi_monte_carlo(jumlah_iterasi, nama_dist_frekuensi, param_frekuensi, nama_dist_severitas, param_severitas, _cache_key=None):
     data_tabel = []
     np.random.seed(42)
     
@@ -117,8 +120,9 @@ def jalankan_simulasi_monte_carlo(jumlah_iterasi, nama_dist_frekuensi, param_fre
     df_tabel = pd.DataFrame(data_tabel)
     return df_tabel
 
-# Fungsi untuk mengalokasikan klaim ke UR dan layer
-def alokasikan_klaim(data_simulasi, ur, layer, data_iterasi):
+# Fungsi untuk mengalokasikan klaim ke UR dan layer dengan caching
+@st.cache_data
+def alokasikan_klaim(data_simulasi, ur, layer, data_iterasi, _cache_key=None):
     hasil = []
     for idx, klaim in enumerate(data_simulasi):
         alokasi_klaim = {
@@ -147,8 +151,9 @@ def alokasikan_klaim(data_simulasi, ur, layer, data_iterasi):
     
     return pd.DataFrame(hasil)
 
-# Fungsi untuk merangkum berdasarkan frekuensi
-def rangkum_berdasarkan_frekuensi(df_simulasi, df_soc, jumlah_iterasi):
+# Fungsi untuk merangkum berdasarkan frekuensi dengan caching
+@st.cache_data
+def rangkum_berdasarkan_frekuensi(df_simulasi, df_soc, jumlah_iterasi, _cache_key=None):
     data_frekuensi = df_simulasi.dropna(subset=['Flagging Frekuensi'])[['Iterasi', 'Flagging Frekuensi']]
     peta_frekuensi = data_frekuensi.set_index('Iterasi')['Flagging Frekuensi'].to_dict()
     
@@ -169,8 +174,9 @@ def rangkum_berdasarkan_frekuensi(df_simulasi, df_soc, jumlah_iterasi):
     df_ringkasan.index.name = 'Iterasi'
     return df_ringkasan.reset_index()
 
-# Fungsi untuk merangkum layer tertentu
-def rangkum_layer(df_soc, nomor_layer, batas_layer, jumlah_iterasi, maks_reinstatement):
+# Fungsi untuk merangkum layer tertentu dengan caching
+@st.cache_data
+def rangkum_layer(df_soc, nomor_layer, batas_layer, jumlah_iterasi, maks_reinstatement, _cache_key=None):
     ringkasan_layer = df_soc.groupby(df_soc['Iterasi'].str.split('.').str[0]).agg({f'Layer {nomor_layer}': 'sum'}).rename(columns={f'Layer {nomor_layer}': f'Total Layer {nomor_layer}'})
     
     semua_iterasi = [str(i) for i in range(1, jumlah_iterasi + 1)]
@@ -187,10 +193,11 @@ def rangkum_layer(df_soc, nomor_layer, batas_layer, jumlah_iterasi, maks_reinsta
     
     return df_ringkasan.reset_index()
 
-# Fungsi untuk menghitung premi
-def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_per_layer):
+# Fungsi untuk menghitung premi dengan caching
+@st.cache_data
+def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_per_layer, _cache_key=None):
     daftar_df_premi = []
-    maks_reinstatement = max(reinstatement_per_layer)  # Kolom maksimum untuk semua layer
+    maks_reinstatement = max(reinstatement_per_layer)
     
     for i, (df_layer, batas_layer, maks_reinst) in enumerate(zip(daftar_df_layer, layer, reinstatement_per_layer)):
         if batas_layer <= 0:
@@ -322,7 +329,9 @@ if file_severitas and file_frekuensi:
     st.header("Fitting Distribusi Severity", divider="orange")
     with st.spinner("Menyesuaikan distribusi severitas..."):
         try:
-            metrik_severitas, param_severitas = sesuaikan_distribusi_severitas(data_severitas)
+            # Generate unique cache key for severity fitting
+            cache_key_severity = str(uuid.uuid4())
+            metrik_severitas, param_severitas = sesuaikan_distribusi_severitas(data_severitas, _cache_key=cache_key_severity)
             st.write("**10 Distribusi Severity Terbaik (diurutkan berdasarkan AIC):**")
             st.dataframe(metrik_severitas, hide_index=True, use_container_width=True)
         except Exception as e:
@@ -356,10 +365,13 @@ if file_severitas and file_frekuensi:
                                  param_negbinom if dist_frekuensi_pilih == 'nbinom' else param_geom
                 param_severitas = param_severitas[dist_severitas_pilih]
                 
+                # Generate unique cache key for Monte Carlo simulation
+                cache_key_monte_carlo = str(uuid.uuid4())
                 df_tabel = jalankan_simulasi_monte_carlo(
                     jumlah_iterasi,
                     dist_frekuensi_pilih, param_frekuensi,
-                    dist_severitas_pilih, param_severitas
+                    dist_severitas_pilih, param_severitas,
+                    _cache_key=cache_key_monte_carlo
                 )
                 
                 st.subheader("1. Hasil Simulasi", divider="orange")
@@ -370,27 +382,36 @@ if file_severitas and file_frekuensi:
                     st.write(f"**Jumlah klaim setelah simulasi**: {len(df_tabel)}")
                     st.write(f"**Rata-rata severitas**: {int(df_tabel['Severitas'].mean())}")
                 
-                df_klaim = alokasikan_klaim(df_tabel['Severitas'].values, ur, layer, df_tabel)
+                # Generate unique cache key for claim allocation
+                cache_key_allocation = str(uuid.uuid4())
+                df_klaim = alokasikan_klaim(df_tabel['Severitas'].values, ur, layer, df_tabel, _cache_key=cache_key_allocation)
                 
                 st.subheader("2. Spreading of Claim (SoC)", divider="orange")
                 st.dataframe(df_klaim, hide_index=True, use_container_width=True)
                 
-                df_ringkasan_frekuensi = rangkum_berdasarkan_frekuensi(df_tabel, df_klaim, jumlah_iterasi)
+                # Generate unique cache key for frequency summary
+                cache_key_freq_summary = str(uuid.uuid4())
+                df_ringkasan_frekuensi = rangkum_berdasarkan_frekuensi(df_tabel, df_klaim, jumlah_iterasi, _cache_key=cache_key_freq_summary)
                 st.subheader("3. Klaim UR", divider="orange")
                 st.dataframe(df_ringkasan_frekuensi, hide_index=True, use_container_width=True)
                 
                 daftar_df_layer = []
                 for i in range(1, 7):
-                    df_layer = rangkum_layer(df_klaim, i, layer[i-1], jumlah_iterasi, reinstatement_per_layer[i-1])
+                    # Generate unique cache key for each layer summary
+                    cache_key_layer = str(uuid.uuid4())
+                    df_layer = rangkum_layer(df_klaim, i, layer[i-1], jumlah_iterasi, reinstatement_per_layer[i-1], _cache_key=cache_key_layer)
                     st.subheader(f"{3+i}. Layer {i}", divider="orange")
                     st.dataframe(df_layer.drop(columns=["Iterasi"]), hide_index=True, use_container_width=True)
                     daftar_df_layer.append(df_layer)
                 
+                # Generate unique cache key for premium calculation
+                cache_key_premium = str(uuid.uuid4())
                 df_premi = hitung_premi(
                     df_ringkasan_frekuensi,
                     daftar_df_layer,
                     layer,
-                    reinstatement_per_layer
+                    reinstatement_per_layer,
+                    _cache_key=cache_key_premium
                 )
                 st.subheader("10. Premi XoL", divider="orange")
                 st.dataframe(df_premi, hide_index=True, use_container_width=True)

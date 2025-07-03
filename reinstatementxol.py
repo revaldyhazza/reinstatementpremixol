@@ -408,7 +408,7 @@ if file_severitas and file_frekuensi:
         for i in range(1, 7):
             col1, col2 = st.columns(2)
             with col1:
-                batas = st.number_input(f"Layer {i}", min_value=0, value=5000000000 if i == 1 else 40000000000 if i == 2 else 50000000050 if i == 3 else 0, step=1000000, key=f"sim_layer_{i}")
+                batas = st.number_input(f"Layer {i}", min_value=0, value=5000000000 if i == 1 else 40000000000 if i == 2 else 50000000000 if i == 3 else 0, step=1000000, key=f"sim_layer_{i}")
             with col2:
                 reinst = st.number_input(f"Jumlah Reinstatement Layer {i}", min_value=0, max_value=100, value=4, step=1, key=f"sim_reinst_{i}")
             layer_sim.append(batas)

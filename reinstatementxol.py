@@ -448,12 +448,12 @@ if file_severitas and file_frekuensi:
                     (df_tabel, '2. Hasil Simulasi'),
                     (df_klaim, '3. Spreading of Claim'),
                     (df_ringkasan_frekuensi, '4. Klaim UR'),
-                    (daftar_df_layer[0]), '5. Layer 1'),
-                    (daftar_df_layer[1]), '6. Layer 2'),
-                    (daftar_df_layer[2]), '7. Layer 3'),
-                    (daftar_df_layer[3]), '8. Layer 4'),
-                    (daftar_df_layer[4]), '9. Layer 5'),
-                    (daftar_df_layer[5]), '10. Layer 6')
+                    (daftar_df_layer[0], '5. Layer 1'),
+                    (daftar_df_layer[1], '6. Layer 2'),
+                    (daftar_df_layer[2], '7. Layer 3'),
+                    (daftar_df_layer[3], '8. Layer 4'),
+                    (daftar_df_layer[4], '9. Layer 5'),
+                    (daftar_df_layer[5], '10. Layer 6')
                 ]
                 
                 for df, nama_lembar in daftar_lembar:

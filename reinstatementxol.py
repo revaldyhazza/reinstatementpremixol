@@ -222,9 +222,10 @@ def hitung_premi(df_ringkasan_frekuensi, daftar_df_layer, layer, reinstatement_p
         data_premi = {
             'Item': [f'Layer {i+1}'],
             'Batas': [int(batas_layer)],
-            'Rata-rata': [int(df_layer[f'Total Layer {i+1}'].mean())],
-            'Standar Deviasi': [int(df_layer[f'Total Layer {i+1}'].std())],
-            'Frekuensi': [int(df_layer[f'Frekuensi Layer {i+1}'].sum())]
+            'Rata-rata Klaim': [int(df_layer[f'Total Layer {i+1}'].mean())],
+            'Standar Deviasi Klaim': [int(df_layer[f'Total Layer {i+1}'].std())],
+            'Frekuensi Klaim': [int(df_layer[f'Frekuensi Layer {i+1}'].sum())],
+            'Total Klaim': [int(df_layer[f'Total Layer {i+1}'].sum())],
         }
         df_premi = pd.DataFrame(data_premi)
         

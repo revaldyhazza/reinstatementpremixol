@@ -416,7 +416,7 @@ if file_severitas and file_frekuensi:
                     cache_key_layer = str(uuid.uuid4())
                     df_layer = rangkum_layer(df_klaim, i, layer[i-1], jumlah_iterasi, reinstatement_per_layer[i-1], _cache_key=cache_key_layer)
                     st.subheader(f"{3+i}. Layer {i}", divider="orange")
-                    st.dataframe(df_layer.drop(columns=["Iterasi"]), hide_index=True, use_container_width=True)
+                    st.dataframe(df_layer, hide_index=True, use_container_width=True)
                     daftar_df_layer.append(df_layer)
                 
                 # Generate unique cache key for premium calculation
@@ -448,12 +448,12 @@ if file_severitas and file_frekuensi:
                     (df_tabel, '2. Hasil Simulasi'),
                     (df_klaim, '3. Spreading of Claim'),
                     (df_ringkasan_frekuensi, '4. Klaim UR'),
-                    (daftar_df_layer[0].drop(columns=["Iterasi"]), '5. Layer 1'),
-                    (daftar_df_layer[1].drop(columns=["Iterasi"]), '6. Layer 2'),
-                    (daftar_df_layer[2].drop(columns=["Iterasi"]), '7. Layer 3'),
-                    (daftar_df_layer[3].drop(columns=["Iterasi"]), '8. Layer 4'),
-                    (daftar_df_layer[4].drop(columns=["Iterasi"]), '9. Layer 5'),
-                    (daftar_df_layer[5].drop(columns=["Iterasi"]), '10. Layer 6')
+                    (daftar_df_layer[0]), '5. Layer 1'),
+                    (daftar_df_layer[1]), '6. Layer 2'),
+                    (daftar_df_layer[2]), '7. Layer 3'),
+                    (daftar_df_layer[3]), '8. Layer 4'),
+                    (daftar_df_layer[4]), '9. Layer 5'),
+                    (daftar_df_layer[5]), '10. Layer 6')
                 ]
                 
                 for df, nama_lembar in daftar_lembar:

@@ -486,7 +486,7 @@ if file_severitas and file_frekuensi:
                 
                 daftar_lembar = [
                     (df_summary, '0. Ringkasan Data Klaim')
-                    (df_soc_real, '0.1 SoC (Data Klaim)'),
+                    (df_soc_real, '0.1. SoC (Data Klaim)'),
                     (df_premi, '1. Premi XoL'),
                     (df_tabel, '2. Hasil Simulasi'),
                     (df_klaim, '3. Spreading of Claim'),

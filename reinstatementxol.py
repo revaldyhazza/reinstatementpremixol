@@ -485,6 +485,8 @@ if file_severitas and file_frekuensi:
                 format_rupiah = '#,##0'
                 
                 daftar_lembar = [
+                    (df_summary, '0. Ringkasan Data Klaim')
+                    (df_soc_real, '0.1 SoC (Data Klaim)'),
                     (df_premi, '1. Premi XoL'),
                     (df_tabel, '2. Hasil Simulasi'),
                     (df_klaim, '3. Spreading of Claim'),
@@ -495,8 +497,8 @@ if file_severitas and file_frekuensi:
                     (daftar_df_layer[3].drop(columns=["Iterasi"]), '8. Layer 4'),
                     (daftar_df_layer[4].drop(columns=["Iterasi"]), '9. Layer 5'),
                     (daftar_df_layer[5].drop(columns=["Iterasi"]), '10. Layer 6'),
-                    (df_soc_real, '11. Spreading of Claim (Data Asli)'),
-                    (df_summary, '12. Ringkasan Data Asli')
+                    
+                    
                 ]
                 
                 for df, nama_lembar in daftar_lembar:

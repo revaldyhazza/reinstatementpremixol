@@ -332,10 +332,10 @@ if file_severitas and file_frekuensi:
     # Input layer untuk data asli
     st.header("Input Layer untuk Data Asli", divider="orange")
     with st.container(border=True):
-        ur = st.number_input("OR", min_value=0, value=5000000000, step=1000000000)
+        ur = st.number_input("OR", min_value=0, value=5000000000, step=1000000000, key="real_ur")
         layer = []
-        for i in range(1, 4):  # Hanya 3 layer sesuai gambar
-            batas = st.number_input(f"Layer {i}", min_value=0, value=5000000000 if i == 1 else 40000000000 if i == 2 else 50000000000, step=1000000, key=f"real_layer_{i}")
+        for i in range(1, 7):  # Increased to 6 layers
+            batas = st.number_input(f"Layer {i}", min_value=0, value=5000000000 if i == 1 else 40000000000 if i == 2 else 50000000050 if i == 3 else 0, step=1000000, key=f"real_layer_{i}")
             layer.append(batas)
     
     # Spreading of Claim untuk data asli
@@ -402,7 +402,7 @@ if file_severitas and file_frekuensi:
     
     st.header("Input OR dan Layer untuk Spreading of Claim (SoC)", divider="orange")
     with st.container(border=True):
-        ur_sim = st.number_input("OR", min_value=0, value=5000000000, step=1000000000)
+        ur_sim = st.number_input("OR", min_value=0, value=5000000000, step=1000000000, key="sim_ur")
         layer_sim = []
         reinstatement_per_layer = []
         for i in range(1, 7):

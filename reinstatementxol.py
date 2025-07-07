@@ -299,7 +299,7 @@ def ringkasan_data_asli(df_soc_real, ur, layer):
     for i in range(1, 7):
         layer_data = df_soc_real[f'Layer {i}'].dropna()
         total_klaim = int(layer_data.sum()) if not layer_data.empty else 0
-        fre Officials_klaim = int(len(layer_data[layer_data > 0]))
+        frekuensi_klaim = int(len(layer_data[layer_data > 0]))
         rata_rata_klaim = int(total_klaim / frekuensi_klaim) if frekuensi_klaim > 0 else 0
         
         summary_data.append({
